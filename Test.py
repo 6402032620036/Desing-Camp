@@ -1,50 +1,40 @@
-def eccentric_footing(P, B, L, e, q_allow):
+"""
+Core design calculations for eccentric footing
+"""
+
+def area(B, L):
+    return B * L
+
+
+def moment(P, e):
+    return P * e
+
+
+def section_modulus(B, L, axis="x"):
     """
-    P = แรงกด (kN)
-    B = ความกว้างฐานราก (m)
-    L = ความยาวฐานราก (m)
-    e = ระยะเยื้องศูนย์ (m)
-    q_allow = กำลังรับน้ำหนักดิน (kN/m^2)
+    axis = 'x' (bending along L)
+    axis = 'y' (bending along B)
     """
-
-    # พื้นที่
-    A = B * L
-
-    # โมเมนต์
-    M = P * e
-
-    # ความเค้น
-    sigma_max = (P / A) + (6 * M / (B * L**2))
-    sigma_min = (P / A) - (6 * M / (B * L**2))
-
-    # เช็คเงื่อนไข
-    no_tension = sigma_min >= 0
-    safe_bearing = sigma_max <= q_allow
-    eccentric_limit = e <= (B / 6)
-
-    # สรุปผล
-    result = {
-        "Area (m^2)": A,
-        "Moment (kN-m)": M,
-        "Sigma max (kN/m^2)": sigma_max,
-        "Sigma min (kN/m^2)": sigma_min,
-        "No tension condition": no_tension,
-        "Bearing capacity OK": safe_bearing,
-        "Eccentricity OK (e <= B/6)": eccentric_limit
-    }
-
-    return result
+    if axis == "x":
+        return B * L**2 / 6
+    elif axis == "y":
+        return L * B**2 / 6
+    else:
+        raise ValueError("axis must be 'x' or 'y'")
 
 
-# 🔹 ตัวอย่างใช้งาน
-if __name__ == "__main__":
-    P = 1000      # kN
-    B = 2.0       # m
-    L = 3.0       # m
-    e = 0.3       # m
-    q_allow = 200 # kN/m^2
+def soil_pressure(P, B, L, e, axis="x"):
+    """
+    Returns sigma_max, sigma_min (kN/m^2)
+    """
+    A = area(B, L)
+    M = moment(P, e)
+    Z = section_modulus(B, L, axis)
 
-    result = eccentric_footing(P, B, L, e, q_allow)
+    sigma_avg = P / A
+    sigma_bending = M / Z
 
-    for k, v in result.items():
-        print(f"{k}: {v}")
+    sigma_max = sigma_avg + sigma_bending
+    sigma_min = sigma_avg - sigma_bending
+
+    return sigma_max, sigma_min
